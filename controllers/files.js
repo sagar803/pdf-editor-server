@@ -14,6 +14,8 @@ export const upload = async (req, res) => {
     const { userId } = req.body;
     const pdfPath = req.file.path;
 
+    console.log(pdfPath);
+
     const pdfBytes = await fs.readFile(pdfPath);
     const pdfDoc = await PDFDocument.load(pdfBytes);
 
@@ -31,29 +33,41 @@ export const upload = async (req, res) => {
     const modifiedPdfBytes = await pdfDoc.save();
 
     const randomId = randomUUID();
-    const editedPdfPath = path.join(
-      __dirname,
-      `../public/modified/modified_${randomId}.pdf`
+    const modifiedToFilePath = `../public/modified/modified_${randomId}.pdf`;
+
+    // // Save modified PDF to public/edited folder with the new filename
+    await fs.writeFile(
+      path.join(__dirname, modifiedToFilePath),
+      modifiedPdfBytes
     );
 
-    // Save modified PDF to public/edited folder with the new filename
-    await fs.writeFile(editedPdfPath, modifiedPdfBytes);
-
-    const saveFileDate = new File({
+    const savedFileDate = new File({
       userId,
       filePath: pdfPath,
-      modifiedToFilePath: editedPdfPath,
+      modifiedToFilePath,
     });
 
-    await saveFileDate.save();
+    await savedFileDate.save();
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "attachment; filename=modified.pdf");
-    res.send(Buffer.from(modifiedPdfBytes));
-
-    await fs.unlink(pdfPath);
+    // res.setHeader("Content-Type", "application/pdf");
+    // res.setHeader("Content-Disposition", "attachment; filename=modified.pdf");
+    // res.send(Buffer.from(modifiedPdfBytes));
+    res.json({ savedFileDate });
+    //await fs.unlink(pdfPath);
   } catch (error) {
     console.error("Error extracting pages:", error);
     res.status(500).send("Error extracting pages");
+  }
+};
+
+export const getFiles = async (req, res) => {
+  console.log("hh");
+  const { userId } = req.params;
+  try {
+    const files = await File.find({ userId });
+    res.status(200).json(files);
+  } catch (error) {
+    console.error("Error fetching files:", error);
+    res.status(500).send("Error fetching files");
   }
 };
